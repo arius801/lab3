@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2026-10-29T18:00:00.000Z" agent="ChatGPT" version="24.7.17">
+  <diagram id="microservices-arch" name="Architecture">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="client" value="Клиент&#xa;Web / Mobile" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="650" y="30" width="200" height="60" as="geometry"/></mxCell>
+        <mxCell id="gateway" value="API Gateway&#xa;Nginx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="650" y="140" width="200" height="70" as="geometry"/></mxCell>
+        <mxCell id="keycloak" value="Keycloak&#xa;OAuth2 / OIDC" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="950" y="145" width="180" height="60" as="geometry"/></mxCell>
+        <mxCell id="catalog" value="catalog-service&#xa;PostgreSQL: catalog_db" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="100" y="300" width="230" height="80" as="geometry"/></mxCell>
+        <mxCell id="order" value="order-service&#xa;PostgreSQL: orders_db" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="420" y="300" width="230" height="80" as="geometry"/></mxCell>
+        <mxCell id="inventory" value="inventory-service&#xa;PostgreSQL: inventory_db" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="740" y="300" width="230" height="80" as="geometry"/></mxCell>
+        <mxCell id="payment" value="payment-service&#xa;PostgreSQL: payments_db" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="1060" y="300" width="230" height="80" as="geometry"/></mxCell>
+        <mxCell id="notify" value="notification-service&#xa;PostgreSQL: notifications_db" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="550" y="600" width="260" height="80" as="geometry"/></mxCell>
+        <mxCell id="rabbit" value="RabbitMQ&#xa;events / commands" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1"><mxGeometry x="470" y="455" width="420" height="70" as="geometry"/></mxCell>
+        <mxCell id="provider" value="Внешний платёжный&#xa;провайдер" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="1300" y="455" width="190" height="70" as="geometry"/></mxCell>
+        <mxCell id="smtp" value="SMTP / Email&#xa;провайдер" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="900" y="610" width="170" height="60" as="geometry"/></mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="client" target="gateway" style="endArrow=block;html=1;rounded=0;strokeWidth=2;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="gateway" target="catalog" value="REST" style="endArrow=block;html=1;rounded=0;strokeWidth=2;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="gateway" target="order" value="REST" style="endArrow=block;html=1;rounded=0;strokeWidth=2;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="order" target="catalog" value="REST internal" style="endArrow=block;html=1;rounded=0;strokeWidth=2;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="order" target="inventory" value="REST internal" style="endArrow=block;html=1;rounded=0;strokeWidth=2;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e6" edge="1" parent="1" source="payment" target="provider" value="HTTPS" style="endArrow=block;html=1;rounded=0;strokeWidth=2;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="order" target="rabbit" value="order.created" style="dashed=1;endArrow=block;html=1;rounded=0;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="rabbit" target="payment" value="order.created" style="dashed=1;endArrow=block;html=1;rounded=0;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="payment" target="rabbit" value="payment.completed / failed" style="dashed=1;endArrow=block;html=1;rounded=0;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="rabbit" target="order" value="payment result" style="dashed=1;endArrow=block;html=1;rounded=0;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="order" target="rabbit" value="order.confirmed / cancelled" style="dashed=1;endArrow=block;html=1;rounded=0;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="rabbit" target="notify" value="order events" style="dashed=1;endArrow=block;html=1;rounded=0;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e13" edge="1" parent="1" source="notify" target="smtp" value="SMTP" style="endArrow=block;html=1;rounded=0;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e14" edge="1" parent="1" source="gateway" target="keycloak" value="OIDC / JWT" style="endArrow=block;html=1;rounded=0;"><mxGeometry relative="1" as="geometry"/></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

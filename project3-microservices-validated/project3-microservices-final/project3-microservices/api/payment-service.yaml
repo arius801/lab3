@@ -1,0 +1,163 @@
+openapi: 3.1.0
+info:
+  title: payment-service
+  version: 1.0.0
+  description: Платежи, callback платёжного провайдера и возвраты.
+  license:
+    name: UNLICENSED
+    url: https://opensource.org/license/unlicense
+paths:
+  /internal/v1/payments:
+    post:
+      tags: [internal]
+      summary: Создать платёж для заказа
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: true
+        schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreatePaymentRequest'}
+            example:
+              orderId: "a21a7b93-92df-4a0d-a1c4-75edb1e9e101"
+              amount: 5000
+              currency: RUB
+      responses:
+        '201':
+          description: Платёж создан
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Payment'}
+        '409':
+          $ref: '#/components/responses/Conflict'
+      operationId: post_internal_v1_payments
+      security:
+      - bearerAuth: []
+  /internal/v1/payments/{paymentId}:
+    get:
+      tags: [internal]
+      summary: Получить состояние платежа
+      parameters:
+      - in: path
+        name: paymentId
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Состояние платежа
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Payment'}
+        '400':
+          description: Некорректный запрос
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      operationId: get_internal_v1_payments_paymentId
+      security:
+      - bearerAuth: []
+  /api/v1/payment-provider/callback:
+    post:
+      tags: [provider-callback]
+      summary: Callback от платёжного провайдера
+      description: Должен быть защищён подписью провайдера и проверкой уникальности callback.
+      parameters:
+      - in: header
+        name: X-Provider-Signature
+        required: true
+        schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [providerPaymentId, status]
+              properties:
+                providerPaymentId: {type: string}
+                status: {type: string, enum: [COMPLETED, FAILED]}
+      responses:
+        '202':
+          description: Callback принят к обработке
+        '400':
+          $ref: '#/components/responses/BadRequest'
+      operationId: post_api_v1_payment_provider_callback
+      security:
+      - providerSignature: []
+  /internal/v1/payments/{paymentId}/refund:
+    post:
+      tags: [internal]
+      summary: Инициировать возврат
+      parameters:
+      - in: path
+        name: paymentId
+        required: true
+        schema: {type: string, format: uuid}
+      - in: header
+        name: Idempotency-Key
+        required: true
+        schema: {type: string}
+      responses:
+        '202':
+          description: Возврат принят к обработке
+        '409':
+          $ref: '#/components/responses/Conflict'
+      operationId: post_internal_v1_payments_paymentId_refund
+      security:
+      - bearerAuth: []
+components:
+  schemas:
+    CreatePaymentRequest:
+      type: object
+      required: [orderId, amount, currency]
+      properties:
+        orderId: {type: string, format: uuid}
+        amount: {type: number, exclusiveMinimum: 0}
+        currency: {type: string, minLength: 3, maxLength: 3}
+    Payment:
+      type: object
+      required: [id, orderId, status, amount, currency]
+      properties:
+        id: {type: string, format: uuid}
+        orderId: {type: string, format: uuid}
+        status: {type: string, enum: [PENDING, COMPLETED, FAILED, REFUNDED]}
+        amount: {type: number}
+        currency: {type: string}
+        paymentUrl: {type: string, format: uri}
+    Problem:
+      type: object
+      required: [title, status]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        traceId: {type: string}
+  responses:
+    BadRequest:
+      description: Некорректный callback
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Conflict:
+      description: Конфликт состояния или дублирующая операция
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    providerSignature:
+      type: apiKey
+      in: header
+      name: X-Provider-Signature
+      description: Подпись callback, проверяемая по секрету платёжного провайдера.
+servers:
+- url: https://payments.electroshop.ru
+  description: Адрес сервиса в целевой среде развертывания; заменить на фактический URL при публикации.

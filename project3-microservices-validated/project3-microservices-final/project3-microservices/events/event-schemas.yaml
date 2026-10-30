@@ -1,0 +1,56 @@
+# Общая оболочка для событий RabbitMQ
+EventEnvelope:
+  type: object
+  required: [eventId, eventType, occurredAt, schemaVersion, correlationId, payload]
+  properties:
+    eventId:
+      type: string
+      format: uuid
+    eventType:
+      type: string
+      example: payment.completed
+    occurredAt:
+      type: string
+      format: date-time
+    schemaVersion:
+      type: integer
+      minimum: 1
+    correlationId:
+      type: string
+      description: Идентификатор сквозного бизнес-процесса
+    payload:
+      type: object
+      additionalProperties: true
+
+# Топики/очереди и маршрутизация
+events:
+  - name: order.created
+    publisher: order-service
+    subscribers: [payment-service]
+    routingKey: order.created
+    payload: { orderId: uuid, amount: number, currency: string }
+  - name: payment.completed
+    publisher: payment-service
+    subscribers: [order-service]
+    routingKey: payment.completed
+    payload: { paymentId: uuid, orderId: uuid, amount: number, currency: string }
+  - name: payment.failed
+    publisher: payment-service
+    subscribers: [order-service]
+    routingKey: payment.failed
+    payload: { paymentId: uuid, orderId: uuid, reason: string }
+  - name: order.confirmed
+    publisher: order-service
+    subscribers: [notification-service]
+    routingKey: order.confirmed
+    payload: { orderId: uuid, customerEmail: string }
+  - name: order.cancelled
+    publisher: order-service
+    subscribers: [notification-service]
+    routingKey: order.cancelled
+    payload: { orderId: uuid, customerEmail: string, reason: string }
+  - name: stock.reservation_failed
+    publisher: inventory-service
+    subscribers: [order-service]
+    routingKey: stock.reservation_failed
+    payload: { orderId: uuid, sku: string, requested: integer, available: integer }

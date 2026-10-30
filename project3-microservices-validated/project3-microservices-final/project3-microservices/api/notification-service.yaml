@@ -1,0 +1,98 @@
+openapi: 3.1.0
+info:
+  title: notification-service
+  version: 1.0.0
+  description: Отправка и журналирование уведомлений.
+  license:
+    name: UNLICENSED
+    url: https://opensource.org/license/unlicense
+paths:
+  /internal/v1/notifications/{notificationId}:
+    get:
+      tags: [internal]
+      summary: Получить статус уведомления
+      parameters:
+      - in: path
+        name: notificationId
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Статус уведомления
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Notification'}
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: get_internal_v1_notifications_notificationId
+      security:
+      - bearerAuth: []
+  /internal/v1/notifications:
+    get:
+      tags: [internal]
+      summary: Получить журнал уведомлений
+      parameters:
+      - in: query
+        name: page
+        schema: {type: integer, minimum: 1, default: 1}
+      - in: query
+        name: size
+        schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Журнал уведомлений
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Notification'}
+                  page: {type: integer}
+                  size: {type: integer}
+                  total: {type: integer}
+        '400':
+          description: Некорректный запрос
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      operationId: get_internal_v1_notifications
+      security:
+      - bearerAuth: []
+components:
+  schemas:
+    Notification:
+      type: object
+      required: [id, type, recipient, status, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        type: {type: string, enum: [ORDER_CONFIRMED, ORDER_CANCELLED]}
+        recipient: {type: string, format: email}
+        status: {type: string, enum: [PENDING, SENT, FAILED]}
+        createdAt: {type: string, format: date-time}
+        sentAt: {type: string, format: date-time}
+    Problem:
+      type: object
+      required: [title, status]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        traceId: {type: string}
+  responses:
+    NotFound:
+      description: Уведомление не найдено
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+servers:
+- url: https://notifications.electroshop.ru
+  description: Адрес сервиса в целевой среде развертывания; заменить на фактический URL при публикации.

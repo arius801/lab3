@@ -1,0 +1,131 @@
+openapi: 3.1.0
+info:
+  title: inventory-service
+  version: 1.0.0
+  description: Складские остатки и резервирование товаров.
+  license:
+    name: UNLICENSED
+    url: https://opensource.org/license/unlicense
+paths:
+  /internal/v1/stock/{sku}:
+    get:
+      tags: [internal]
+      summary: Получить доступный остаток
+      parameters:
+      - in: path
+        name: sku
+        required: true
+        schema: {type: string}
+      responses:
+        '200':
+          description: Остаток
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [sku, available]
+                properties:
+                  sku: {type: string}
+                  available: {type: integer, minimum: 0}
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: get_internal_v1_stock_sku
+      security:
+      - bearerAuth: []
+  /internal/v1/reservations:
+    post:
+      tags: [internal]
+      summary: Зарезервировать товары для заказа
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: true
+        schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ReservationRequest'}
+            example:
+              orderId: "a21a7b93-92df-4a0d-a1c4-75edb1e9e101"
+              items: [{sku: "KB-100", quantity: 2}]
+      responses:
+        '201':
+          description: Резерв создан
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Reservation'}
+        '409':
+          description: Недостаточно товара
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
+      operationId: post_internal_v1_reservations
+      security:
+      - bearerAuth: []
+  /internal/v1/reservations/{reservationId}/release:
+    post:
+      tags: [internal]
+      summary: Освободить резерв
+      parameters:
+      - in: path
+        name: reservationId
+        required: true
+        schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Резерв освобождён
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Reservation'}
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: post_internal_v1_reservations_reservationId_release
+      security:
+      - bearerAuth: []
+components:
+  schemas:
+    ReservationRequest:
+      type: object
+      required: [orderId, items]
+      properties:
+        orderId: {type: string, format: uuid}
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [sku, quantity]
+            properties:
+              sku: {type: string}
+              quantity: {type: integer, minimum: 1}
+    Reservation:
+      type: object
+      required: [id, orderId, status]
+      properties:
+        id: {type: string, format: uuid}
+        orderId: {type: string, format: uuid}
+        status: {type: string, enum: [RESERVED, RELEASED, FAILED]}
+    Problem:
+      type: object
+      required: [title, status]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        traceId: {type: string}
+  responses:
+    NotFound:
+      description: Ресурс не найден
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+servers:
+- url: https://inventory.electroshop.ru
+  description: Адрес сервиса в целевой среде развертывания; заменить на фактический URL при публикации.

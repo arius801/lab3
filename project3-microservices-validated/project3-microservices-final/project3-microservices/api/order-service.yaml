@@ -1,0 +1,175 @@
+openapi: 3.1.0
+info:
+  title: order-service
+  version: 1.0.0
+  description: Создание заказов и управление их состояниями.
+  license:
+    name: UNLICENSED
+    url: https://opensource.org/license/unlicense
+servers:
+- url: https://orders.electroshop.ru
+  description: Адрес сервиса в целевой среде развертывания; заменить на фактический URL при публикации.
+paths:
+  /api/v1/orders:
+    post:
+      tags: [public]
+      summary: Создать заказ
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: header
+        name: Idempotency-Key
+        required: true
+        schema: {type: string, minLength: 8}
+        description: Ключ защиты от повторного создания заказа.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CreateOrderRequest'}
+            example:
+              items:
+              - productId: "d2719a12-66c8-4f5e-8c44-1eabed29ab31"
+                quantity: 2
+              customerEmail: "buyer@example.com"
+      responses:
+        '201':
+          description: Заказ создан и ожидает оплаты
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Order'}
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/Unprocessable'
+      operationId: post_api_v1_orders
+    get:
+      tags: [public]
+      summary: Получить список заказов текущего пользователя
+      security:
+      - bearerAuth: []
+      parameters:
+      - in: query
+        name: page
+        schema: {type: integer, minimum: 1, default: 1}
+      - in: query
+        name: size
+        schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        '200':
+          description: Список заказов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: {$ref: '#/components/schemas/Order'}
+                  page: {type: integer}
+                  size: {type: integer}
+                  total: {type: integer}
+        '400':
+          description: Некорректный запрос
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+      operationId: get_api_v1_orders
+  /api/v1/orders/{orderId}:
+    get:
+      tags: [public]
+      summary: Получить заказ
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Заказ
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Order'}
+        '404':
+          $ref: '#/components/responses/NotFound'
+      operationId: get_api_v1_orders_orderId
+  /internal/v1/orders/{orderId}/cancel:
+    post:
+      tags: [internal]
+      summary: Отменить заказ внутренним вызовом
+      parameters:
+      - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Заказ отменён
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Order'}
+        '409':
+          $ref: '#/components/responses/Conflict'
+      operationId: post_internal_v1_orders_orderId_cancel
+      security:
+      - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    OrderId:
+      in: path
+      name: orderId
+      required: true
+      schema: {type: string, format: uuid}
+  schemas:
+    CreateOrderRequest:
+      type: object
+      required: [items, customerEmail]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [productId, quantity]
+            properties:
+              productId: {type: string, format: uuid}
+              quantity: {type: integer, minimum: 1}
+        customerEmail: {type: string, format: email}
+    Order:
+      type: object
+      required: [id, status, total, currency, createdAt]
+      properties:
+        id: {type: string, format: uuid}
+        status:
+          type: string
+          enum: [PENDING_PAYMENT, CONFIRMED, CANCELLED, REJECTED]
+        total: {type: number, minimum: 0}
+        currency: {type: string, example: RUB}
+        createdAt: {type: string, format: date-time}
+    Problem:
+      type: object
+      required: [title, status]
+      properties:
+        type: {type: string, format: uri}
+        title: {type: string}
+        status: {type: integer}
+        detail: {type: string}
+        traceId: {type: string}
+  responses:
+    Conflict:
+      description: Конфликт состояния или повторный запрос с другим содержимым
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Unprocessable:
+      description: Нельзя выполнить заказ из-за отсутствия товара или цены
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    NotFound:
+      description: Заказ не найден
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
